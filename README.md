@@ -15,10 +15,13 @@
 - cd flappy-build
 
 run on android systeem
-- npx expo start -android
+- npx expo start 
+- a
 
 run on IOS systeem
-- npx expo start -ios
+- npx expo start 
+- i
 
 run on web
-- npx expo start -web
+- npx expo start 
+- w

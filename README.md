@@ -11,6 +11,10 @@
  ## react native skia install
 - npx expo install @shopify/react-native-skia
 
+## react native reanimated install
+React Native Skia offers integration with Reanimated v3, enabling the execution of animations on the UI thread. This integration is available starting from Reanimated v3.
+- npx expo install react-native-reanimated
+
 ## start app
 - cd flappy-build
 

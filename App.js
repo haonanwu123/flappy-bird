@@ -8,7 +8,10 @@ import {
   Easing,
   withSequence,
   withRepeat,
+  useFrameCallback,
 } from "react-native-reanimated";
+
+const GRAVITY = 300; // px per second ^2
 
 const App = () => {
   const { width, height } = useWindowDimensions();
@@ -21,6 +24,22 @@ const App = () => {
   );
 
   const x = useSharedValue(width);
+
+  const birdY = useSharedValue(0);
+  const birdYVelocity = useSharedValue(100);
+
+  // get the timeSincePreviousFrame value
+  // useFrameCallback((inf) => {
+  //   console.log(inf);
+  // })
+
+  useFrameCallback(({timeSincePreviousFrame: dt}) => {
+    if(!dt) {
+      return;
+    }
+    birdY.value = birdY.value + (birdYVelocity.value * dt) / 1000;
+    birdYVelocity.value = birdYVelocity.value + (GRAVITY * dt) / 1000;
+  });
 
   useEffect(() => {
     x.value = withRepeat(
@@ -35,7 +54,10 @@ const App = () => {
   const pipeOffset = 0;
 
   return (
-    <Canvas style={{ width, height }}>
+    <Canvas 
+      style={{ width, height }}
+      onTouch={() => (birdYVelocity.value = -300)}
+    >
       {/*  Draw background image*/}
       <Image image={bg} width={width} height={height} fit={"cover"}></Image>
 
@@ -72,7 +94,7 @@ const App = () => {
         image={bird}
         height={64}
         width={48}
-        y={height / 2}
+        y={birdY}
         x={width / 4}
       ></Image>
     </Canvas>

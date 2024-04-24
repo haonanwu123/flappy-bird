@@ -10,6 +10,11 @@ import {
   withRepeat,
   useFrameCallback,
 } from "react-native-reanimated";
+import {
+  GestureHandlerRootView,
+  GestureDetector,
+  Gesture,
+} from "react-native-gesture-handler";
 
 const GRAVITY = 300; // px per second ^2
 
@@ -33,8 +38,8 @@ const App = () => {
   //   console.log(inf);
   // })
 
-  useFrameCallback(({timeSincePreviousFrame: dt}) => {
-    if(!dt) {
+  useFrameCallback(({ timeSincePreviousFrame: dt }) => {
+    if (!dt) {
       return;
     }
     birdY.value = birdY.value + (birdYVelocity.value * dt) / 1000;
@@ -51,53 +56,60 @@ const App = () => {
     );
   }, []);
 
+  const gesture = Gesture.Tap().onStart(() => {
+    birdYVelocity.value = -300;
+  });
+
   const pipeOffset = 0;
 
   return (
-    <Canvas 
-      style={{ width, height }}
-      onTouch={() => (birdYVelocity.value = -300)}
-    >
-      {/*  Draw background image*/}
-      <Image image={bg} width={width} height={height} fit={"cover"}></Image>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureDetector gesture={gesture}>
+        <Canvas
+          style={{ width, height }}
+        >
+          {/*  Draw background image*/}
+          <Image image={bg} width={width} height={height} fit={"cover"}></Image>
 
-      {/* Draw pipeTop image */}
-      <Image
-        image={pipeTop}
-        y={pipeOffset - 320}
-        x={x}
-        width={103}
-        height={640}
-      ></Image>
+          {/* Draw pipeTop image */}
+          <Image
+            image={pipeTop}
+            y={pipeOffset - 320}
+            x={x}
+            width={103}
+            height={640}
+          ></Image>
 
-      {/* draw pipeBottom image */}
-      <Image
-        image={pipeBottom}
-        y={height - 320}
-        x={x}
-        width={103}
-        height={640}
-      ></Image>
+          {/* draw pipeBottom image */}
+          <Image
+            image={pipeBottom}
+            y={height - 320}
+            x={x}
+            width={103}
+            height={640}
+          ></Image>
 
-      {/* Draw base image */}
-      <Image
-        image={base}
-        width={width}
-        height={150}
-        y={height - 75}
-        x={0}
-        fit={"cover"}
-      ></Image>
+          {/* Draw base image */}
+          <Image
+            image={base}
+            width={width}
+            height={150}
+            y={height - 75}
+            x={0}
+            fit={"cover"}
+          ></Image>
 
-      {/* Draw bird image */}
-      <Image
-        image={bird}
-        height={64}
-        width={48}
-        y={birdY}
-        x={width / 4}
-      ></Image>
-    </Canvas>
+          {/* Draw bird image */}
+          <Image
+            image={bird}
+            height={64}
+            width={48}
+            y={birdY}
+            x={width / 4}
+          ></Image>
+        </Canvas>
+      </GestureDetector>
+    </GestureHandlerRootView>
   );
 };
 export default App;

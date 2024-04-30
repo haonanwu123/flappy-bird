@@ -1,7 +1,13 @@
-import React from "react";
-import { useEffect } from "react";
-import { Canvas, useImage, Image, Group } from "@shopify/react-native-skia";
-import { useWindowDimensions } from "react-native";
+import { useEffect, useState } from "react";
+import {
+  Canvas,
+  useImage,
+  Image,
+  Group,
+  Text,
+  matchFont,
+} from "@shopify/react-native-skia";
+import { Platform, useWindowDimensions } from "react-native";
 import {
   useSharedValue,
   withTiming,
@@ -10,8 +16,10 @@ import {
   withRepeat,
   useFrameCallback,
   useDerivedValue,
+  useAnimatedReaction,
   interpolate,
   Extrapolation,
+  runOnJS,
 } from "react-native-reanimated";
 import {
   GestureHandlerRootView,
@@ -24,6 +32,8 @@ const GUMP_FORCE = -500;
 
 const App = () => {
   const { width, height } = useWindowDimensions();
+  const [score, setScore] = useState(0);
+
   const bg = useImage(require("./assets/sprites/background-day.png"));
   const base = useImage(require("./assets/sprites/base.png"));
   const bird = useImage(require("./assets/sprites/yellowbird-upflap.png"));
@@ -36,6 +46,61 @@ const App = () => {
 
   const birdY = useSharedValue(height / 3);
   const birdYVelocity = useSharedValue(100);
+
+  useEffect(() => {
+    x.value = withRepeat(
+      withSequence(
+        withTiming(-150, { duration: 3000, easing: Easing.linear }),
+        withTiming(width, { duration: 0 })
+      ),
+      -1
+    );
+  }, []);
+
+  // useAnimatedReaction(
+  //   () => {
+  //     return x.value;
+  //   },
+  //   (currentValue, previousValue) => {
+  //     if (currentValue !== previousValue) {
+  //       console.log('the map move to: ', currentValue);
+  //     }
+  //   }
+  // ); // get the x current value from the map
+
+  useAnimatedReaction(
+    () => x.value,
+    (currentValue, previousValue) => {
+      const middle = width / 2;
+
+      if (
+        currentValue !== previousValue &&
+        currentValue <= middle &&
+        // @ts-ignore
+        previousValue > middle
+      ) {
+        runOnJS(setScore)(score + 1);
+      }
+    }
+  );
+
+  // get the timeSincePreviousFrame value
+  // useFrameCallback((inf) => {
+  //   console.log(inf);
+  // })
+
+  useFrameCallback(({ timeSincePreviousFrame: dt }) => {
+    if (!dt) {
+      return;
+    }
+    birdY.value = birdY.value + (birdYVelocity.value * dt) / 1000;
+    birdYVelocity.value = birdYVelocity.value + (GRAVITY * dt) / 1000;
+  });
+
+  const gesture = Gesture.Tap().onStart(() => {
+    birdYVelocity.value = GUMP_FORCE;
+  });
+
   const birdTransform = useDerivedValue(() => {
     return [
       {
@@ -52,34 +117,16 @@ const App = () => {
     return { x: width / 4 + 32, y: birdY.value + 24 };
   });
 
-  // get the timeSincePreviousFrame value
-  // useFrameCallback((inf) => {
-  //   console.log(inf);
-  // })
-
-  useFrameCallback(({ timeSincePreviousFrame: dt }) => {
-    if (!dt) {
-      return;
-    }
-    birdY.value = birdY.value + (birdYVelocity.value * dt) / 1000;
-    birdYVelocity.value = birdYVelocity.value + (GRAVITY * dt) / 1000;
-  });
-
-  useEffect(() => {
-    x.value = withRepeat(
-      withSequence(
-        withTiming(-150, { duration: 3000, easing: Easing.linear }),
-        withTiming(width, { duration: 0 })
-      ),
-      -1
-    );
-  }, []);
-
-  const gesture = Gesture.Tap().onStart(() => {
-    birdYVelocity.value = GUMP_FORCE;
-  });
-
   const pipeOffset = 0;
+
+  const fontFamily = Platform.select({ ios: "Helvetica", default: "self" });
+  const fontStyle = {
+    fontFamily,
+    fontSize: 40,
+    fontWeight: "bold",
+  };
+  // @ts-ignore
+  const font = matchFont(fontStyle);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -126,6 +173,14 @@ const App = () => {
               x={width / 4}
             ></Image>
           </Group>
+
+          {/* Score */}
+          <Text
+            x={width / 2 - 30}
+            y={100}
+            text={score.toString()}
+            font={font}
+          />
         </Canvas>
       </GestureDetector>
     </GestureHandlerRootView>

@@ -6,6 +6,8 @@ import {
   Group,
   Text,
   matchFont,
+  Circle,
+  Rect,
 } from "@shopify/react-native-skia";
 import { Platform, useWindowDimensions } from "react-native";
 import {
@@ -20,6 +22,7 @@ import {
   interpolate,
   Extrapolation,
   runOnJS,
+  cancelAnimation,
 } from "react-native-reanimated";
 import {
   GestureHandlerRootView,
@@ -29,6 +32,9 @@ import {
 
 const GRAVITY = 1000; // px per second ^2
 const GUMP_FORCE = -500;
+
+const pipeWidth = 104;
+const pipHeight = 640;
 
 const App = () => {
   const { width, height } = useWindowDimensions();
@@ -42,10 +48,17 @@ const App = () => {
     require("./assets/sprites/pipe-green-bottom.png")
   );
 
+  const gameOver = useSharedValue(false);
   const x = useSharedValue(width);
 
   const birdY = useSharedValue(height / 3);
-  const birdYVelocity = useSharedValue(100);
+  const birdPos = {
+    x: width / 4,
+  };
+  const birdYVelocity = useSharedValue(0);
+
+  const birdCenterX = useDerivedValue(() => birdPos.x + 32);
+  const birdCenterY = useDerivedValue(() => birdY.value + 24);
 
   useEffect(() => {
     x.value = withRepeat(
@@ -68,18 +81,69 @@ const App = () => {
   //   }
   // ); // get the x current value from the map
 
+  useEffect(() => {
+    moveTheMap();
+  }, []);
+
+  const moveTheMap = () => {
+    x.value = withRepeat(
+      withSequence(
+        withTiming(-150, { duration: 3000, easing: Easing.linear }),
+        withTiming(width, { duration: 0 })
+      ),
+      -1
+    );
+  };
+
+  // Scoring system
   useAnimatedReaction(
     () => x.value,
     (currentValue, previousValue) => {
-      const middle = width / 2;
+      const middle = birdPos.x;
 
       if (
         currentValue !== previousValue &&
         currentValue <= middle &&
-        // @ts-ignore
+        previousValue !== null &&
         previousValue > middle
       ) {
         runOnJS(setScore)(score + 1);
+      }
+    }
+  );
+
+  // Collision detection
+  useAnimatedReaction(
+    () => birdY.value,
+    (currentValue, previousValue) => {
+      // Ground collision detection
+      if (
+        (previousValue !== null && previousValue > height) ||
+        currentValue < 0
+      ) {
+        gameOver.value = true;
+      }
+      // Bottom pipe
+      if (
+        birdCenterX.value >= x.value &&
+        birdCenterX.value <= x.value + pipeWidth &&
+        birdCenterY.value >= height - 320 + pipeOffset &&
+        birdCenterY.value <= height - 320 + pipeOffset + pipHeight
+      ) {
+        gameOver.value = true;
+      }
+
+      if (birdPos.x >= x.value) {
+        gameOver.value = true;
+      }
+    }
+  );
+
+  useAnimatedReaction(
+    () => gameOver.value,
+    (currentValue, previousValue) => {
+      if (currentValue && !previousValue) {
+        cancelAnimation(x);
       }
     }
   );
@@ -90,15 +154,31 @@ const App = () => {
   // })
 
   useFrameCallback(({ timeSincePreviousFrame: dt }) => {
-    if (!dt) {
+    if (!dt || gameOver.value) {
       return;
     }
     birdY.value = birdY.value + (birdYVelocity.value * dt) / 1000;
     birdYVelocity.value = birdYVelocity.value + (GRAVITY * dt) / 1000;
   });
 
+  const restartGame = () => {
+    "worklet";
+    birdY.value = height / 3;
+    birdYVelocity.value = 0;
+    gameOver.value = false;
+    x.value = width;
+    runOnJS(moveTheMap)();
+    runOnJS(setScore)(0);
+  };
+
   const gesture = Gesture.Tap().onStart(() => {
-    birdYVelocity.value = GUMP_FORCE;
+    if (gameOver.value) {
+      //restart
+      restartGame();
+    } else {
+      //jump
+      birdYVelocity.value = GUMP_FORCE;
+    }
   });
 
   const birdTransform = useDerivedValue(() => {
@@ -140,8 +220,8 @@ const App = () => {
             image={pipeTop}
             y={pipeOffset - 320}
             x={x}
-            width={103}
-            height={640}
+            width={pipeWidth}
+            height={pipHeight}
           ></Image>
 
           {/* draw pipeBottom image */}
@@ -149,8 +229,8 @@ const App = () => {
             image={pipeBottom}
             y={height - 320}
             x={x}
-            width={103}
-            height={640}
+            width={pipeWidth}
+            height={pipHeight}
           ></Image>
 
           {/* Draw base image */}
@@ -165,14 +245,18 @@ const App = () => {
 
           <Group transform={birdTransform} origin={birdOrigin}>
             {/* Draw bird image */}
-            <Image
+            {/* <Image
               image={bird}
               height={64}
               width={48}
               y={birdY}
-              x={width / 4}
-            ></Image>
+              x={birdPos.x}
+            ></Image> */}
           </Group>
+
+          {/* Sim */}
+          <Circle cy={birdCenterY} cx={birdCenterX} r={15} color={"red"} />
+          {/* <Rect x={0} y={0} width={256} height={256} color={"lightblue"} /> */}
 
           {/* Score */}
           <Text

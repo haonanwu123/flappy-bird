@@ -6,8 +6,6 @@ import {
   Group,
   Text,
   matchFont,
-  Circle,
-  Rect,
 } from "@shopify/react-native-skia";
 import { Platform, useWindowDimensions } from "react-native";
 import {

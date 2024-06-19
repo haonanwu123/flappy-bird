@@ -37,8 +37,11 @@ const pipeHeight = 640;
 const App = () => {
   const { width, height } = useWindowDimensions();
   const [score, setScore] = useState(0);
+  const [message, setMessage] = useState("");
+  const [currentBackground, setCurrentBackground] = useState("day");
 
-  const bg = useImage(require("./assets/sprites/background-day.png"));
+  const bgDay = useImage(require("./assets/sprites/background-day.png"));
+  const bgNight = useImage(require("./assets/sprites/background-night.png"));
   const base = useImage(require("./assets/sprites/base.png"));
   const bird = useImage(require("./assets/sprites/yellowbird-upflap.png"));
   const pipeTop = useImage(require("./assets/sprites/pipe-green-top.png"));
@@ -104,6 +107,31 @@ const App = () => {
     );
   };
 
+  const messages = ["excellent", "good job", "nice"];
+
+  const updateScoreAndMessage = (newScore) => {
+    setScore(newScore);
+    if (newScore % 5 === 0) {
+      const randomMessage =
+        messages[Math.floor(Math.random() * messages.length)];
+      setMessage(randomMessage);
+    } else {
+      setMessage("");
+    }
+  };
+
+  useEffect(() => {
+    const interval = 5;
+    const phase = Math.floor(score / interval) % 2;
+  
+    if (phase === 0) {
+      setCurrentBackground("day");
+    } else {
+      setCurrentBackground("night");
+    }
+  }, [score]);
+  
+
   // Scoring system
   useAnimatedReaction(
     () => pipeX.value,
@@ -123,8 +151,8 @@ const App = () => {
         currentValue <= middle &&
         previousValue > middle
       ) {
-        // do something ✨
-        runOnJS(setScore)(score + 1);
+        // do something
+        runOnJS(updateScoreAndMessage)(score + 1);
       }
     }
   );
@@ -192,6 +220,7 @@ const App = () => {
     pipeX.value = width;
     runOnJS(moveTheMap)();
     runOnJS(setScore)(0);
+    runOnJS(setMessage)("");
   };
 
   const gesture = Gesture.Tap().onStart(() => {
@@ -234,8 +263,21 @@ const App = () => {
       <GestureDetector gesture={gesture}>
         <Canvas style={{ width, height }}>
           {/* Background */}
-          <Image image={bg} width={width} height={height} fit={"cover"} />
-
+          {currentBackground === "day" ? (
+            <Image 
+              image={bgDay} 
+              width={width} 
+              height={height} 
+              fit={"cover"} 
+            />
+          ) : (
+            <Image
+              image={bgNight}
+              width={width}
+              height={height}
+              fit={"cover"}
+            />
+          )}
           {/* Pipes */}
           <Image
             image={pipeTop}
@@ -276,6 +318,11 @@ const App = () => {
             text={score.toString()}
             font={font}
           />
+
+          {/* Message */}
+          {message !== "" && (
+            <Text x={width / 2 - 60} y={145} text={message} font={font} />
+          )}
         </Canvas>
       </GestureDetector>
     </GestureHandlerRootView>
